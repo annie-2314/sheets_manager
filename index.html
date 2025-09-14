@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Project Management Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-file-excel"></i> Excel Project Manager</h1>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="createNewSheet()">
+                    <i class="fas fa-plus"></i> New Sheet
+                </button>
+                <button class="btn btn-secondary" onclick="importExcelFile()">
+                    <i class="fas fa-file-excel"></i> Import Excel
+                </button>
+                <button class="btn btn-secondary" onclick="exportToExcel()">
+                    <i class="fas fa-download"></i> Export Excel
+                </button>
+                <button class="btn btn-secondary" onclick="openGoogleSheets()">
+                    <i class="fab fa-google-drive"></i> Open Google Sheets
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>Sheets</h3>
+                <button class="btn-icon" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <div class="sheet-list" id="sheetList">
+                <!-- Sheets will be dynamically added here -->
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="welcome-content">
+                    <i class="fas fa-file-excel fa-4x"></i>
+                    <h2>Welcome to Excel Project Manager</h2>
+                    <p>Create and manage your project sheets with full Excel compatibility</p>
+                    <div class="sheet-actions">
+                        <button class="btn btn-primary btn-large" onclick="createNewSheet()">
+                            <i class="fas fa-plus"></i> Create New Sheet
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="importExcelFile()" style="margin-left: 1rem;">
+                            <i class="fas fa-file-excel"></i> Import Excel File
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="openGoogleSheets()" style="margin-left: 1rem;">
+                            <i class="fab fa-google-drive"></i> Open Google Sheets
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container" id="tableContainer" style="display: none;">
+                <!-- Sheet Tabs -->
+                <div class="sheet-tabs" id="sheetTabs">
+                    <!-- Sheet tabs will be dynamically added here -->
+                </div>
+
+                <!-- Table Content -->
+                <div class="table-content">
+                    <div class="table-toolbar">
+                        <div class="toolbar-left">
+                            <button class="btn btn-sm" onclick="addSheet()">
+                                <i class="fas fa-plus"></i> Add Sheet
+                            </button>
+                            <button class="btn btn-sm" onclick="renameSheet()">
+                                <i class="fas fa-edit"></i> Rename
+                            </button>
+                            <button class="btn btn-sm" onclick="deleteSheet()">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                        <div class="toolbar-right">
+                            <button class="btn btn-sm" onclick="addRow()">
+                                <i class="fas fa-plus"></i> Add Row
+                            </button>
+                            <button class="btn btn-sm" onclick="addColumn()">
+                                <i class="fas fa-plus"></i> Add Column
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dataTable">
+                            <thead id="tableHead">
+                                <!-- Table headers will be dynamically added here -->
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Table rows will be dynamically added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="createSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Sheet</h3>
+                <button class="btn-close" onclick="closeModal('createSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetName">Sheet Name:</label>
+                    <input type="text" id="sheetName" placeholder="Enter sheet name" required>
+                </div>
+                <div class="form-group">
+                    <label for="initialColumns">Initial Columns:</label>
+                    <input type="number" id="initialColumns" value="5" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label for="initialRows">Initial Rows:</label>
+                    <input type="number" id="initialRows" value="10" min="1" max="100">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateSheet()">Create Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="renameSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Rename Sheet</h3>
+                <button class="btn-close" onclick="closeModal('renameSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newSheetName">New Sheet Name:</label>
+                    <input type="text" id="newSheetName" placeholder="Enter new sheet name" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('renameSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmRenameSheet()">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="shareModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Table</h3>
+                <button class="btn-close" onclick="closeModal('shareModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="shareUrl">Share URL:</label>
+                    <div class="input-group">
+                        <input type="text" id="shareUrl" readonly>
+                        <button class="btn btn-sm" onclick="copyShareUrl()">Copy</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="accessLevel">Access Level:</label>
+                    <select id="accessLevel">
+                        <option value="view">View Only</option>
+                        <option value="edit">Edit</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('shareModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

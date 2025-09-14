@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Project Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fab fa-google-drive"></i> Google Sheets Project Manager</h1>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" onclick="showHome()">
+                    <i class="fas fa-home"></i> Home
+                </button>
+                <button class="btn btn-primary" onclick="showAllSheets()">
+                    <i class="fas fa-th-large"></i> All Sheets
+                </button>
+                <button class="btn btn-secondary" onclick="createNewSheet()">
+                    <i class="fas fa-plus"></i> New Sheet
+                </button>
+                <button class="btn btn-secondary" onclick="loadExistingSheet()">
+                    <i class="fas fa-folder-open"></i> Load Sheet
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3><i class="fab fa-google-drive"></i> My Sheets</h3>
+                <button class="btn-icon" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div class="sidebar-actions">
+                    <button class="btn btn-sm btn-primary" onclick="createNewSheet()">
+                        <i class="fas fa-plus"></i> New Sheet
+                    </button>
+                    <button class="btn btn-sm btn-secondary" onclick="loadExistingSheet()">
+                        <i class="fas fa-folder-open"></i> Load Sheet
+                    </button>
+                </div>
+                <div class="sheets-sidebar-list" id="sheetsSidebarList">
+                    <!-- Sheets will be loaded here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Welcome Screen -->
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="welcome-content">
+                    <i class="fab fa-google-drive fa-4x"></i>
+                    <h2>Google Sheets Project Manager</h2>
+                    <p>Create and manage your Google Sheets with team collaboration</p>
+                    <div class="sheet-actions">
+                        <button class="btn btn-primary btn-large" onclick="createNewSheet()">
+                            <i class="fas fa-plus"></i> Create New Sheet
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="loadExistingSheet()" style="margin-left: 1rem;">
+                            <i class="fas fa-folder-open"></i> Load Existing Sheet
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="openGoogleSheets()" style="margin-left: 1rem;">
+                            <i class="fab fa-google-drive"></i> Open Google Sheets
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Sheets View -->
+            <div class="all-sheets-container" id="allSheetsContainer" style="display: none;">
+                <div class="all-sheets-header">
+                    <h2><i class="fas fa-th-large"></i> All Sheets</h2>
+                    <p>Manage all your Google Sheets in one place</p>
+                </div>
+                
+                <!-- Sheets Grid -->
+                <div class="all-sheets-grid" id="allSheetsGrid">
+                    <!-- All sheets will be displayed here -->
+                </div>
+            </div>
+
+            <!-- Sheets Management Screen -->
+            <div class="sheets-container" id="sheetsContainer" style="display: none;">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <button class="btn btn-secondary" onclick="refreshSheets()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                    <button class="btn btn-secondary" onclick="showWelcomeScreen()">
+                        <i class="fas fa-home"></i> Home
+                    </button>
+                </div>
+
+                <!-- Sheets List -->
+                <div class="sheets-list" id="sheetsList">
+                    <!-- Sheets will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Sheet Editor -->
+            <div class="sheet-editor" id="sheetEditor" style="display: none;">
+                <div class="editor-header">
+                    <button class="btn btn-sm" onclick="closeEditor()">
+                        <i class="fas fa-arrow-left"></i> Back to Sheets
+                    </button>
+                    <h3 id="currentSheetTitle">Sheet Title</h3>
+                    <div class="editor-actions">
+                        <button class="btn btn-sm" onclick="shareCurrentSheet()">
+                            <i class="fas fa-share"></i> Share
+                        </button>
+                        <button class="btn btn-sm" onclick="openInGoogleSheets()">
+                            <i class="fas fa-external-link-alt"></i> Open in Google Sheets
+                        </button>
+                    </div>
+                </div>
+                <div class="sheet-iframe-container">
+                    <iframe id="sheetIframe" src="" frameborder="0"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="createSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Google Sheet</h3>
+                <button class="btn-close" onclick="closeModal('createSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetTitle">Sheet Title:</label>
+                    <input type="text" id="sheetTitle" placeholder="Enter sheet title" required>
+                </div>
+                <div class="form-group">
+                    <label for="sheetDescription">Description (optional):</label>
+                    <textarea id="sheetDescription" placeholder="Enter description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateSheet()">Create Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="loadSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Load Existing Sheet</h3>
+                <button class="btn-close" onclick="closeModal('loadSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetId">Google Sheet ID or URL:</label>
+                    <input type="text" id="sheetId" placeholder="Enter sheet ID or URL" required>
+                    <small>You can find this in the Google Sheets URL: docs.google.com/spreadsheets/d/[SHEET_ID]/edit</small>
+                </div>
+                <div class="form-group">
+                    <label for="sheetName">Custom Name (optional):</label>
+                    <input type="text" id="sheetName" placeholder="Enter custom name">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('loadSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmLoadSheet()">Load Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="shareModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Sheet</h3>
+                <button class="btn-close" onclick="closeModal('shareModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="shareEmail">Email Address:</label>
+                    <input type="email" id="shareEmail" placeholder="Enter email address" required>
+                </div>
+                <div class="form-group">
+                    <label for="shareRole">Permission Level:</label>
+                    <select id="shareRole">
+                        <option value="reader">Reader (View only)</option>
+                        <option value="writer">Writer (Can edit)</option>
+                        <option value="owner">Owner (Full control)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="shareMessage">Message (optional):</label>
+                    <textarea id="shareMessage" placeholder="Add a message for the recipient"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="shareLink">Share Link:</label>
+                    <div class="input-group">
+                        <input type="text" id="shareLink" readonly>
+                        <button class="btn btn-sm" onclick="copyShareLink()">Copy</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('shareModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmShareSheet()">Share Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="renameModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Rename Sheet</h3>
+                <button class="btn-close" onclick="closeModal('renameModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newSheetName">New Name:</label>
+                    <input type="text" id="newSheetName" placeholder="Enter new sheet name" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmRenameSheet()">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Sheets Manager - Simple Version
+        class GoogleSheetsManager {
+            constructor() {
+                this.sheets = [];
+                this.currentSheet = null;
+                this.init();
+            }
+
+            init() {
+                this.loadSheetsFromStorage();
+                this.addSampleSheets();
+                this.renderSheetsList();
+                this.showAppropriateScreen();
+            }
+
+            showAppropriateScreen() {
+                const welcomeScreen = document.getElementById('welcomeScreen');
+                const sheetsContainer = document.getElementById('sheetsContainer');
+                
+                if (this.sheets.length > 0) {
+                    welcomeScreen.style.display = 'none';
+                    sheetsContainer.style.display = 'block';
+                } else {
+                    welcomeScreen.style.display = 'flex';
+                    sheetsContainer.style.display = 'none';
+                }
+            }
+
+            addSampleSheets() {
+                if (this.sheets.length === 0) {
+                    this.sheets = [
+                        {
+                            id: 'sample1',
+                            title: 'Project Tasks',
+                            description: 'Track your project tasks and progress',
+                            type: 'Sample Google Sheet',
+                            url: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
+                            embedUrl: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing&rm=minimal&widget=true&chrome=false',
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        },
+                        {
+                            id: 'sample2',
+                            title: 'Team Schedule',
+                            description: 'Manage team schedules and meetings',
+                            type: 'Sample Google Sheet',
+                            url: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
+                            embedUrl: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing&rm=minimal&widget=true&chrome=false',
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        }
+                    ];
+                    this.saveSheetsToStorage();
+                }
+            }
+
+            loadSheetsFromStorage() {
+                const saved = localStorage.getItem('googleSheetsList');
+                this.sheets = saved ? JSON.parse(saved) : [];
+            }
+
+            saveSheetsToStorage() {
+                localStorage.setItem('googleSheetsList', JSON.stringify(this.sheets));
+            }
+
+            renderSheetsList() {
+                this.renderSidebarSheets();
+                this.renderMainSheets();
+                this.renderAllSheets();
+            }
+
+            renderSidebarSheets() {
+                const sidebarList = document.getElementById('sheetsSidebarList');
+                if (!sidebarList) return;
+
+                sidebarList.innerHTML = '';
+
+                if (this.sheets.length === 0) {
+                    sidebarList.innerHTML = '<div class="no-sheets-sidebar">No sheets yet</div>';
+                    return;
+                }
+
+                this.sheets.forEach((sheet, index) => {
+                    const sheetItem = document.createElement('div');
+                    sheetItem.className = 'sidebar-sheet-item';
+                    sheetItem.innerHTML = `
+                        <div class="sidebar-sheet-info" ondblclick="googleSheetsManager.openSheet(${index})">
+                            <div class="sidebar-sheet-title" onclick="googleSheetsManager.renameSheet(${index})">${sheet.title}</div>
+                            <div class="sidebar-sheet-meta">${new Date(sheet.modified).toLocaleDateString()}</div>
+                        </div>
+                        <div class="sidebar-sheet-actions">
+                            <button class="sidebar-action-btn" onclick="googleSheetsManager.openSheet(${index})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="sidebar-action-btn" onclick="googleSheetsManager.openInGoogleSheets('${sheet.url}')" title="Open">
+                                <i class="fas fa-external-link-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    sidebarList.appendChild(sheetItem);
+                });
+            }
+
+            renderMainSheets() {
+                const sheetsList = document.getElementById('sheetsList');
+                if (!sheetsList) return;
+
+                sheetsList.innerHTML = '';
+
+                if (this.sheets.length === 0) {
+                    sheetsList.innerHTML = '<div class="no-sheets">No sheets found. Create a new sheet or load an existing one to get started.</div>';
+                    return;
+                }
+
+                this.sheets.forEach((sheet, index) => {
+                    const sheetItem = document.createElement('div');
+                    sheetItem.className = 'sheet-item';
+                    sheetItem.innerHTML = `
+                        <div class="sheet-info" ondblclick="googleSheetsManager.openSheet(${index})">
+                            <h4 class="sheet-title" onclick="googleSheetsManager.renameSheet(${index})">${sheet.title}</h4>
+                            <p class="sheet-description">${sheet.description || 'No description'}</p>
+                            <p class="sheet-meta">Modified: ${new Date(sheet.modified).toLocaleDateString()}</p>
+                            <p class="sheet-type">${sheet.type}</p>
+                        </div>
+                        <div class="sheet-actions">
+                            <button class="action-btn edit-btn" onclick="googleSheetsManager.openSheet(${index})" title="Edit Sheet">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="action-btn share-btn" onclick="googleSheetsManager.shareSheet(${index})" title="Share Sheet">
+                                <i class="fas fa-share"></i>
+                            </button>
+                            <button class="action-btn open-btn" onclick="googleSheetsManager.openInGoogleSheets('${sheet.url}')" title="Open in Google Sheets">
+                                <i class="fas fa-external-link-alt"></i>
+                            </button>
+                            <button class="action-btn delete-btn" onclick="googleSheetsManager.deleteSheet(${index})" title="Delete Sheet">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    sheetsList.appendChild(sheetItem);
+                });
+            }
+
+            renderAllSheets() {
+                const allSheetsGrid = document.getElementById('allSheetsGrid');
+                if (!allSheetsGrid) return;
+
+                allSheetsGrid.innerHTML = '';
+
+                if (this.sheets.length === 0) {
+                    allSheetsGrid.innerHTML = '<div class="no-sheets-all">No sheets found. Create a new sheet or load an existing one to get started.</div>';
+                    return;
+                }
+
+                this.sheets.forEach((sheet, index) => {
+                    const sheetCard = document.createElement('div');
+                    sheetCard.className = 'all-sheet-card';
+                    sheetCard.innerHTML = `
+                        <div class="all-sheet-card-header">
+                            <h3 class="all-sheet-title" onclick="googleSheetsManager.renameSheet(${index})">${sheet.title}</h3>
+                            <div class="all-sheet-type">${sheet.type}</div>
+                        </div>
+                        <div class="all-sheet-card-body">
+                            <p class="all-sheet-description">${sheet.description || 'No description'}</p>
+                            <p class="all-sheet-meta">Modified: ${new Date(sheet.modified).toLocaleDateString()}</p>
+                        </div>
+                        <div class="all-sheet-card-actions">
+                            <button class="all-sheet-btn edit-btn" onclick="googleSheetsManager.openSheet(${index})" title="Edit Sheet">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="all-sheet-btn share-btn" onclick="googleSheetsManager.shareSheet(${index})" title="Share Sheet">
+                                <i class="fas fa-share"></i> Share
+                            </button>
+                            <button class="all-sheet-btn open-btn" onclick="googleSheetsManager.openInGoogleSheets('${sheet.url}')" title="Open in Google Sheets">
+                                <i class="fas fa-external-link-alt"></i> Open
+                            </button>
+                            <button class="all-sheet-btn delete-btn" onclick="googleSheetsManager.deleteSheet(${index})" title="Delete Sheet">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+                    allSheetsGrid.appendChild(sheetCard);
+                });
+            }
+
+            createNewSheet() {
+                const title = document.getElementById('sheetTitle').value.trim();
+                const description = document.getElementById('sheetDescription').value.trim();
+                
+                if (!title) {
+                    alert('Please enter a sheet title');
+                    return;
+                }
+
+                // Create a new Google Sheet
+                const newSheet = {
+                    id: 'new_' + Date.now(),
+                    title: title,
+                    description: description,
+                    type: 'New Google Sheet',
+                    url: 'https://sheets.google.com/create',
+                    embedUrl: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing&rm=minimal&widget=true&chrome=false',
+                    created: new Date().toISOString(),
+                    modified: new Date().toISOString()
+                };
+
+                this.sheets.unshift(newSheet);
+                this.saveSheetsToStorage();
+                this.renderSheetsList();
+                this.closeModal('createSheetModal');
+                
+                // Show sheets container
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('sheetsContainer').style.display = 'block';
+                
+                alert(`Google Sheet "${title}" added to your list!`);
+            }
+
+            loadExistingSheet() {
+                const sheetIdOrUrl = document.getElementById('sheetId').value.trim();
+                const customName = document.getElementById('sheetName').value.trim();
+                
+                if (!sheetIdOrUrl) {
+                    alert('Please enter a sheet ID or URL');
+                    return;
+                }
+
+                // Extract sheet ID from URL if needed
+                let sheetId = sheetIdOrUrl;
+                if (sheetIdOrUrl.includes('docs.google.com/spreadsheets/d/')) {
+                    sheetId = sheetIdOrUrl.split('/d/')[1].split('/')[0];
+                }
+
+                // Create sheet object
+                const newSheet = {
+                    id: sheetId,
+                    title: customName || `Google Sheet (${sheetId})`,
+                    description: 'Loaded from Google Sheets',
+                    type: 'Existing Google Sheet',
+                    url: `https://docs.google.com/spreadsheets/d/${sheetId}/edit`,
+                    embedUrl: `https://docs.google.com/spreadsheets/d/${sheetId}/edit?usp=sharing&rm=minimal&widget=true&chrome=false`,
+                    created: new Date().toISOString(),
+                    modified: new Date().toISOString()
+                };
+
+                this.sheets.unshift(newSheet);
+                this.saveSheetsToStorage();
+                this.renderSheetsList();
+                this.closeModal('loadSheetModal');
+                
+                // Show sheets container
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('sheetsContainer').style.display = 'block';
+                
+                alert(`Google Sheet loaded successfully!`);
+            }
+
+            openSheet(index) {
+                const sheet = this.sheets[index];
+                if (!sheet) return;
+
+                this.currentSheet = sheet;
+                document.getElementById('currentSheetTitle').textContent = sheet.title;
+                
+                // Show editor
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('sheetsContainer').style.display = 'none';
+                document.getElementById('sheetEditor').style.display = 'block';
+                
+                // Load sheet in iframe
+                const iframe = document.getElementById('sheetIframe');
+                iframe.src = sheet.embedUrl;
+            }
+
+            closeEditor() {
+                document.getElementById('sheetEditor').style.display = 'none';
+                document.getElementById('sheetsContainer').style.display = 'block';
+                this.currentSheet = null;
+            }
+
+            shareSheet(index) {
+                const sheet = this.sheets[index];
+                if (!sheet) return;
+
+                this.currentSheet = sheet;
+                document.getElementById('shareLink').value = sheet.url;
+                document.getElementById('shareModal').classList.add('show');
+            }
+
+            confirmShareSheet() {
+                const email = document.getElementById('shareEmail').value.trim();
+                const role = document.getElementById('shareRole').value;
+                const message = document.getElementById('shareMessage').value.trim();
+
+                if (!email) {
+                    alert('Please enter an email address');
+                    return;
+                }
+
+                // For demo purposes, show the share link
+                const shareLink = document.getElementById('shareLink').value;
+                alert(`Share this link with ${email}:\n\n${shareLink}\n\nPermission: ${role}\nMessage: ${message || 'No message'}`);
+                
+                this.closeModal('shareModal');
+            }
+
+            openInGoogleSheets(url) {
+                if (url) {
+                    window.open(url, '_blank');
+                } else if (this.currentSheet) {
+                    window.open(this.currentSheet.url, '_blank');
+                }
+            }
+
+            deleteSheet(index) {
+                if (confirm('Are you sure you want to delete this sheet from your list?')) {
+                    this.sheets.splice(index, 1);
+                    this.saveSheetsToStorage();
+                    this.renderSheetsList();
+                }
+            }
+
+            renameSheet(index) {
+                const sheet = this.sheets[index];
+                if (!sheet) return;
+
+                this.currentRenameIndex = index;
+                document.getElementById('newSheetName').value = sheet.title;
+                document.getElementById('renameModal').classList.add('show');
+                document.getElementById('newSheetName').focus();
+            }
+
+            confirmRenameSheet() {
+                const newName = document.getElementById('newSheetName').value.trim();
+                if (!newName) {
+                    alert('Please enter a new name');
+                    return;
+                }
+
+                if (this.currentRenameIndex !== undefined) {
+                    const sheet = this.sheets[this.currentRenameIndex];
+                    if (sheet && newName !== sheet.title) {
+                        sheet.title = newName;
+                        sheet.modified = new Date().toISOString();
+                        this.saveSheetsToStorage();
+                        this.renderSheetsList();
+                    }
+                }
+
+                this.closeModal('renameModal');
+                this.currentRenameIndex = undefined;
+            }
+
+            refreshSheets() {
+                this.renderSheetsList();
+                this.showAppropriateScreen();
+            }
+
+            showWelcomeScreen() {
+                this.showAppropriateScreen();
+                document.getElementById('sheetEditor').style.display = 'none';
+                this.currentSheet = null;
+            }
+
+            showHome() {
+                document.getElementById('welcomeScreen').style.display = 'flex';
+                document.getElementById('allSheetsContainer').style.display = 'none';
+                document.getElementById('sheetsContainer').style.display = 'none';
+                document.getElementById('sheetEditor').style.display = 'none';
+                this.currentSheet = null;
+            }
+
+            showAllSheets() {
+                document.getElementById('welcomeScreen').style.display = 'none';
+                document.getElementById('allSheetsContainer').style.display = 'block';
+                document.getElementById('sheetsContainer').style.display = 'none';
+                document.getElementById('sheetEditor').style.display = 'none';
+                this.currentSheet = null;
+                this.renderAllSheets();
+            }
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('show');
+            }
+        }
+
+        // Global Functions
+        function createNewSheet() {
+            document.getElementById('createSheetModal').classList.add('show');
+            document.getElementById('sheetTitle').focus();
+        }
+
+        function loadExistingSheet() {
+            document.getElementById('loadSheetModal').classList.add('show');
+            document.getElementById('sheetId').focus();
+        }
+
+        function openGoogleSheets() {
+            window.open('https://sheets.google.com', '_blank');
+        }
+
+        function shareCurrentSheet() {
+            if (googleSheetsManager.currentSheet) {
+                const index = googleSheetsManager.sheets.findIndex(s => s.id === googleSheetsManager.currentSheet.id);
+                googleSheetsManager.shareSheet(index);
+            }
+        }
+
+        function openInGoogleSheets() {
+            googleSheetsManager.openInGoogleSheets();
+        }
+
+        function closeEditor() {
+            googleSheetsManager.closeEditor();
+        }
+
+        function refreshSheets() {
+            googleSheetsManager.refreshSheets();
+        }
+
+        function showWelcomeScreen() {
+            googleSheetsManager.showWelcomeScreen();
+        }
+
+        function showHome() {
+            googleSheetsManager.showHome();
+        }
+
+        function showAllSheets() {
+            googleSheetsManager.showAllSheets();
+        }
+
+        function confirmCreateSheet() {
+            googleSheetsManager.createNewSheet();
+        }
+
+        function confirmLoadSheet() {
+            googleSheetsManager.loadExistingSheet();
+        }
+
+        function confirmShareSheet() {
+            googleSheetsManager.confirmShareSheet();
+        }
+
+        function confirmRenameSheet() {
+            googleSheetsManager.confirmRenameSheet();
+        }
+
+        function copyShareLink() {
+            const shareLink = document.getElementById('shareLink');
+            shareLink.select();
+            document.execCommand('copy');
+            alert('Share link copied to clipboard!');
+        }
+
+        function closeModal(modalId) {
+            googleSheetsManager.closeModal(modalId);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        // Initialize the application
+        const googleSheetsManager = new GoogleSheetsManager();
+    </script>
+</body>
+</html>

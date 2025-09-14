@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Project Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fab fa-google-drive"></i> Google Sheets Project Manager</h1>
+            </div>
+            <div class="header-right">
+                <div id="user-info" style="display: none;">
+                    <span id="user-email"></span>
+                    <button class="btn btn-sm" onclick="signOut()">Sign Out</button>
+                </div>
+                <button id="signin-button" class="btn btn-primary" onclick="signIn()">
+                    <i class="fab fa-google"></i> Sign in with Google
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sign In Screen -->
+            <div class="welcome-screen" id="signinScreen">
+                <div class="welcome-content">
+                    <i class="fab fa-google-drive fa-4x"></i>
+                    <h2>Google Sheets Project Manager</h2>
+                    <p>Access and manage your Google Sheets with team collaboration</p>
+                    <button class="btn btn-primary btn-large" onclick="signIn()">
+                        <i class="fab fa-google"></i> Sign in with Google
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sheets Management Screen -->
+            <div class="sheets-container" id="sheetsContainer" style="display: none;">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="createNewSheet()">
+                        <i class="fas fa-plus"></i> New Sheet
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadExistingSheet()">
+                        <i class="fas fa-folder-open"></i> Load Sheet
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshSheets()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Sheets List -->
+                <div class="sheets-list" id="sheetsList">
+                    <!-- Sheets will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Sheet Editor -->
+            <div class="sheet-editor" id="sheetEditor" style="display: none;">
+                <div class="editor-header">
+                    <button class="btn btn-sm" onclick="closeEditor()">
+                        <i class="fas fa-arrow-left"></i> Back to Sheets
+                    </button>
+                    <h3 id="currentSheetTitle">Sheet Title</h3>
+                    <div class="editor-actions">
+                        <button class="btn btn-sm" onclick="shareCurrentSheet()">
+                            <i class="fas fa-share"></i> Share
+                        </button>
+                        <button class="btn btn-sm" onclick="openInGoogleSheets()">
+                            <i class="fas fa-external-link-alt"></i> Open in Google Sheets
+                        </button>
+                    </div>
+                </div>
+                <div class="sheet-iframe-container">
+                    <iframe id="sheetIframe" src="" frameborder="0"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="createSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Google Sheet</h3>
+                <button class="btn-close" onclick="closeModal('createSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetTitle">Sheet Title:</label>
+                    <input type="text" id="sheetTitle" placeholder="Enter sheet title" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateSheet()">Create Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="loadSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Load Existing Sheet</h3>
+                <button class="btn-close" onclick="closeModal('loadSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetId">Google Sheet ID or URL:</label>
+                    <input type="text" id="sheetId" placeholder="Enter sheet ID or URL" required>
+                    <small>You can find this in the Google Sheets URL</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('loadSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmLoadSheet()">Load Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="shareModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Sheet</h3>
+                <button class="btn-close" onclick="closeModal('shareModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="shareEmail">Email Address:</label>
+                    <input type="email" id="shareEmail" placeholder="Enter email address" required>
+                </div>
+                <div class="form-group">
+                    <label for="shareRole">Permission Level:</label>
+                    <select id="shareRole">
+                        <option value="reader">Reader (View only)</option>
+                        <option value="writer">Writer (Can edit)</option>
+                        <option value="owner">Owner (Full control)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="shareMessage">Message (optional):</label>
+                    <textarea id="shareMessage" placeholder="Add a message for the recipient"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('shareModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmShareSheet()">Share Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Sheets Manager with your API key
+        class GoogleSheetsManager {
+            constructor() {
+                this.isSignedIn = false;
+                this.currentUser = null;
+                this.currentSheet = null;
+                this.sheets = [];
+                this.accessToken = null;
+                this.init();
+            }
+
+            async init() {
+                await this.loadGoogleAPI();
+                this.checkAuthStatus();
+            }
+
+            async loadGoogleAPI() {
+                try {
+                    await new Promise((resolve) => {
+                        gapi.load('client', resolve);
+                    });
+
+                    await gapi.client.init({
+                        apiKey: 'AIzaSyAqhs-9DBfJjuLDrZR_MuTCcPDjnI3Qoxk',
+                        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                        clientId: 'YOUR_CLIENT_ID', // You need to get this from Google Console
+                        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive'
+                    });
+
+                    console.log('Google API loaded successfully');
+                } catch (error) {
+                    console.error('Error loading Google API:', error);
+                    this.showError('Failed to load Google API. Please check your configuration.');
+                }
+            }
+
+            checkAuthStatus() {
+                const token = localStorage.getItem('google_access_token');
+                if (token) {
+                    this.isSignedIn = true;
+                    this.accessToken = token;
+                    this.updateUI();
+                    this.loadUserSheets();
+                }
+            }
+
+            async signIn() {
+                try {
+                    // For now, we'll use a simple approach
+                    // In production, you'd need proper OAuth setup
+                    const email = prompt('Enter your Google email:');
+                    if (!email) return;
+
+                    // Simulate sign-in for demo purposes
+                    this.isSignedIn = true;
+                    this.currentUser = { email: email };
+                    this.accessToken = 'demo_token';
+                    localStorage.setItem('google_access_token', 'demo_token');
+                    
+                    this.updateUI();
+                    this.loadUserSheets();
+                } catch (error) {
+                    console.error('Sign-in error:', error);
+                    this.showError('Sign-in failed. Please try again.');
+                }
+            }
+
+            signOut() {
+                localStorage.removeItem('google_access_token');
+                this.isSignedIn = false;
+                this.currentUser = null;
+                this.accessToken = null;
+                this.sheets = [];
+                this.updateUI();
+            }
+
+            updateUI() {
+                const signinScreen = document.getElementById('signinScreen');
+                const sheetsContainer = document.getElementById('sheetsContainer');
+                const userInfo = document.getElementById('user-info');
+                const signinButton = document.getElementById('signin-button');
+
+                if (this.isSignedIn) {
+                    signinScreen.style.display = 'none';
+                    sheetsContainer.style.display = 'block';
+                    userInfo.style.display = 'block';
+                    signinButton.style.display = 'none';
+                    
+                    if (this.currentUser) {
+                        document.getElementById('user-email').textContent = this.currentUser.email || 'User';
+                    }
+                } else {
+                    signinScreen.style.display = 'flex';
+                    sheetsContainer.style.display = 'none';
+                    userInfo.style.display = 'none';
+                    signinButton.style.display = 'block';
+                }
+            }
+
+            async loadUserSheets() {
+                if (!this.isSignedIn) return;
+
+                try {
+                    // For demo purposes, show some sample sheets
+                    this.sheets = [
+                        {
+                            id: 'demo1',
+                            title: 'Project Tasks',
+                            url: 'https://docs.google.com/spreadsheets/d/demo1/edit',
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        },
+                        {
+                            id: 'demo2',
+                            title: 'Team Schedule',
+                            url: 'https://docs.google.com/spreadsheets/d/demo2/edit',
+                            created: new Date().toISOString(),
+                            modified: new Date().toISOString()
+                        }
+                    ];
+
+                    this.renderSheetsList();
+                } catch (error) {
+                    console.error('Error loading sheets:', error);
+                    this.showError('Failed to load sheets. Please try again.');
+                }
+            }
+
+            renderSheetsList() {
+                const sheetsList = document.getElementById('sheetsList');
+                if (!sheetsList) return;
+
+                sheetsList.innerHTML = '';
+
+                if (this.sheets.length === 0) {
+                    sheetsList.innerHTML = '<div class="no-sheets">No sheets found. Create a new sheet to get started.</div>';
+                    return;
+                }
+
+                this.sheets.forEach(sheet => {
+                    const sheetItem = document.createElement('div');
+                    sheetItem.className = 'sheet-item';
+                    sheetItem.innerHTML = `
+                        <div class="sheet-info">
+                            <h4>${sheet.title}</h4>
+                            <p>Modified: ${new Date(sheet.modified).toLocaleDateString()}</p>
+                            <p>Status: Ready for collaboration</p>
+                        </div>
+                        <div class="sheet-actions">
+                            <button class="btn btn-sm" onclick="googleSheetsManager.openSheet('${sheet.id}')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-sm" onclick="googleSheetsManager.shareSheet('${sheet.id}')">
+                                <i class="fas fa-share"></i> Share
+                            </button>
+                            <button class="btn btn-sm" onclick="googleSheetsManager.openInGoogleSheets('${sheet.url}')">
+                                <i class="fas fa-external-link-alt"></i> Open
+                            </button>
+                        </div>
+                    `;
+                    sheetsList.appendChild(sheetItem);
+                });
+            }
+
+            async createNewSheet() {
+                const title = document.getElementById('sheetTitle').value.trim();
+                if (!title) {
+                    alert('Please enter a sheet title');
+                    return;
+                }
+
+                try {
+                    // For demo purposes, create a mock sheet
+                    const newSheet = {
+                        id: 'demo_' + Date.now(),
+                        title: title,
+                        url: `https://docs.google.com/spreadsheets/d/demo_${Date.now()}/edit`,
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString()
+                    };
+
+                    this.sheets.unshift(newSheet);
+                    this.renderSheetsList();
+                    this.closeModal('createSheetModal');
+                    
+                    // Open the new sheet
+                    this.openSheet(newSheet.id);
+                    
+                    alert(`Google Sheet "${title}" created successfully!`);
+                } catch (error) {
+                    console.error('Error creating sheet:', error);
+                    this.showError('Failed to create sheet. Please try again.');
+                }
+            }
+
+            async loadExistingSheet() {
+                const sheetIdOrUrl = document.getElementById('sheetId').value.trim();
+                if (!sheetIdOrUrl) {
+                    alert('Please enter a sheet ID or URL');
+                    return;
+                }
+
+                try {
+                    // Extract sheet ID from URL if needed
+                    let sheetId = sheetIdOrUrl;
+                    if (sheetIdOrUrl.includes('docs.google.com/spreadsheets/d/')) {
+                        sheetId = sheetIdOrUrl.split('/d/')[1].split('/')[0];
+                    }
+
+                    // For demo purposes, add to sheets list
+                    const newSheet = {
+                        id: sheetId,
+                        title: `Loaded Sheet (${sheetId})`,
+                        url: `https://docs.google.com/spreadsheets/d/${sheetId}/edit`,
+                        created: new Date().toISOString(),
+                        modified: new Date().toISOString()
+                    };
+
+                    this.sheets.unshift(newSheet);
+                    this.renderSheetsList();
+                    this.closeModal('loadSheetModal');
+                    this.openSheet(sheetId);
+                    
+                    alert(`Google Sheet loaded successfully!`);
+                } catch (error) {
+                    console.error('Error loading sheet:', error);
+                    this.showError('Failed to load sheet. Please check the sheet ID and try again.');
+                }
+            }
+
+            openSheet(sheetId) {
+                const sheet = this.sheets.find(s => s.id === sheetId);
+                if (!sheet) return;
+
+                this.currentSheet = sheet;
+                document.getElementById('currentSheetTitle').textContent = sheet.title;
+                
+                // Show editor
+                document.getElementById('sheetsContainer').style.display = 'none';
+                document.getElementById('sheetEditor').style.display = 'block';
+                
+                // Load sheet in iframe
+                const iframe = document.getElementById('sheetIframe');
+                iframe.src = sheet.url;
+            }
+
+            closeEditor() {
+                document.getElementById('sheetEditor').style.display = 'none';
+                document.getElementById('sheetsContainer').style.display = 'block';
+                this.currentSheet = null;
+            }
+
+            async shareSheet(sheetId) {
+                this.currentSheet = this.sheets.find(s => s.id === sheetId);
+                if (!this.currentSheet) return;
+
+                document.getElementById('shareModal').classList.add('show');
+            }
+
+            async confirmShareSheet() {
+                const email = document.getElementById('shareEmail').value.trim();
+                const role = document.getElementById('shareRole').value;
+                const message = document.getElementById('shareMessage').value.trim();
+
+                if (!email) {
+                    alert('Please enter an email address');
+                    return;
+                }
+
+                try {
+                    // For demo purposes, simulate sharing
+                    this.closeModal('shareModal');
+                    alert(`Sheet shared with ${email} as ${role}. In a real implementation, this would use Google Drive API to share the sheet.`);
+                } catch (error) {
+                    console.error('Error sharing sheet:', error);
+                    this.showError('Failed to share sheet. Please try again.');
+                }
+            }
+
+            openInGoogleSheets(url) {
+                if (url) {
+                    window.open(url, '_blank');
+                } else if (this.currentSheet) {
+                    window.open(this.currentSheet.url, '_blank');
+                }
+            }
+
+            refreshSheets() {
+                this.loadUserSheets();
+            }
+
+            showError(message) {
+                alert(message);
+            }
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('show');
+            }
+        }
+
+        // Global Functions
+        function createNewSheet() {
+            document.getElementById('createSheetModal').classList.add('show');
+            document.getElementById('sheetTitle').focus();
+        }
+
+        function loadExistingSheet() {
+            document.getElementById('loadSheetModal').classList.add('show');
+            document.getElementById('sheetId').focus();
+        }
+
+        function shareCurrentSheet() {
+            if (googleSheetsManager.currentSheet) {
+                googleSheetsManager.shareSheet(googleSheetsManager.currentSheet.id);
+            }
+        }
+
+        function openInGoogleSheets() {
+            googleSheetsManager.openInGoogleSheets();
+        }
+
+        function closeEditor() {
+            googleSheetsManager.closeEditor();
+        }
+
+        function signIn() {
+            googleSheetsManager.signIn();
+        }
+
+        function signOut() {
+            googleSheetsManager.signOut();
+        }
+
+        function refreshSheets() {
+            googleSheetsManager.refreshSheets();
+        }
+
+        function confirmCreateSheet() {
+            googleSheetsManager.createNewSheet();
+        }
+
+        function confirmLoadSheet() {
+            googleSheetsManager.loadExistingSheet();
+        }
+
+        function confirmShareSheet() {
+            googleSheetsManager.confirmShareSheet();
+        }
+
+        function closeModal(modalId) {
+            googleSheetsManager.closeModal(modalId);
+        }
+
+        // Initialize the application
+        const googleSheetsManager = new GoogleSheetsManager();
+    </script>
+</body>
+</html>

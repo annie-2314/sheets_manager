@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Project Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script>
+        // Initialize Google Sign-In
+        google.accounts.id.initialize({
+            client_id: 'YOUR_CLIENT_ID', // Replace with your OAuth client ID
+            callback: handleCredentialResponse
+        });
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fab fa-google-drive"></i> Google Sheets Project Manager</h1>
+            </div>
+            <div class="header-right">
+                <div id="user-info" style="display: none;">
+                    <span id="user-email"></span>
+                    <button class="btn btn-sm" onclick="signOut()">Sign Out</button>
+                </div>
+                <div id="signin-button" class="g_id_signin" data-type="standard" data-size="large"></div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Sign In Screen -->
+            <div class="welcome-screen" id="signinScreen">
+                <div class="welcome-content">
+                    <i class="fab fa-google-drive fa-4x"></i>
+                    <h2>Google Sheets Project Manager</h2>
+                    <p>Access and manage your Google Sheets with team collaboration</p>
+                    <div class="g_id_signin" data-type="standard" data-size="large"></div>
+                </div>
+            </div>
+
+            <!-- Sheets Management Screen -->
+            <div class="sheets-container" id="sheetsContainer" style="display: none;">
+                <!-- Toolbar -->
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="createNewSheet()">
+                        <i class="fas fa-plus"></i> New Sheet
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadExistingSheet()">
+                        <i class="fas fa-folder-open"></i> Load Sheet
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshSheets()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Sheets List -->
+                <div class="sheets-list" id="sheetsList">
+                    <!-- Sheets will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Sheet Editor -->
+            <div class="sheet-editor" id="sheetEditor" style="display: none;">
+                <div class="editor-header">
+                    <button class="btn btn-sm" onclick="closeEditor()">
+                        <i class="fas fa-arrow-left"></i> Back to Sheets
+                    </button>
+                    <h3 id="currentSheetTitle">Sheet Title</h3>
+                    <div class="editor-actions">
+                        <button class="btn btn-sm" onclick="shareCurrentSheet()">
+                            <i class="fas fa-share"></i> Share
+                        </button>
+                        <button class="btn btn-sm" onclick="openInGoogleSheets()">
+                            <i class="fas fa-external-link-alt"></i> Open in Google Sheets
+                        </button>
+                    </div>
+                </div>
+                <div class="sheet-iframe-container">
+                    <iframe id="sheetIframe" src="" frameborder="0"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal" id="createSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Google Sheet</h3>
+                <button class="btn-close" onclick="closeModal('createSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetTitle">Sheet Title:</label>
+                    <input type="text" id="sheetTitle" placeholder="Enter sheet title" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('createSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCreateSheet()">Create Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="loadSheetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Load Existing Sheet</h3>
+                <button class="btn-close" onclick="closeModal('loadSheetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="sheetId">Google Sheet ID or URL:</label>
+                    <input type="text" id="sheetId" placeholder="Enter sheet ID or URL" required>
+                    <small>You can find this in the Google Sheets URL</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('loadSheetModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmLoadSheet()">Load Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="shareModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Sheet</h3>
+                <button class="btn-close" onclick="closeModal('shareModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="shareEmail">Email Address:</label>
+                    <input type="email" id="shareEmail" placeholder="Enter email address" required>
+                </div>
+                <div class="form-group">
+                    <label for="shareRole">Permission Level:</label>
+                    <select id="shareRole">
+                        <option value="reader">Reader (View only)</option>
+                        <option value="writer">Writer (Can edit)</option>
+                        <option value="owner">Owner (Full control)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="shareMessage">Message (optional):</label>
+                    <textarea id="shareMessage" placeholder="Add a message for the recipient"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('shareModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmShareSheet()">Share Sheet</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="google-sheets-manager.js"></script>
+</body>
+</html>
